@@ -3,6 +3,30 @@ from os import stat_result
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
+
+f = open("output.html", "w")
+h = open("full.html", "w")
+
+f.write(
+    "<style>.product{border: 2px solid red; padding: 1em; margin: 1em;}</style>")
+h.write(
+    "<style>.product{border: 2px solid red; padding: 1em; margin: 1em;}</style>")
+
+
+def foundError(data, name):
+    f.write("<div class='product'><h2>" + name + "</h2>")
+    f.write(data)
+    f.write("</div>")
+
+
+def foundProduct(data, classValue):
+    h.write("<div class='product'>")
+    for i in classValue:
+        h.write("<h2>"+i+"</h2>")
+    h.write(data)
+    h.write("</div>")
+
+
 # Setting the useragent so that Amazon.in doesn't drop our http requests.
 headers = {
     'User-Agent': 'My User Agent 1.0',
@@ -28,6 +52,13 @@ for pageNumber in range(1, totPages + 1):
 
         if('&' not in str(product)):
             fullProduct = product.parent.parent.parent.parent.parent.parent.parent
+            classAttr = fullProduct.get('class')
+            if(set(['a-section', 'a-spacing-none']) <= set(classAttr)):
+                if(len(classAttr) > 2):
+                    fullProduct = product.parent.parent.parent.parent.parent.parent
+                    foundProduct(str(fullProduct), classAttr)
+
+
 
             # Find if product is sponsored or not.
             isSponsored = fullProduct.find(class_="s-label-popover-default")
@@ -48,17 +79,40 @@ for pageNumber in range(1, totPages + 1):
                 if(name):
                     name = name.text
                 else:
-                    print("Failed to extract products contact developer...")
+                    name = fullProduct.find(
+                        class_="a-truncate-full")
+                    if(name):
+                        name = name.text
+                    else:
+                        print("Failed to extract products contact developer...")
+                        foundError(str(fullProduct), "name")
 
             # Find start rating of the product.
             starRating = fullProduct.find(class_='a-icon-alt')
             if(starRating):
                 starRating = starRating.text
+            else:
+                print("Unable to find starRating...")
+                foundError(str(fullProduct), "starRating")
 
             # Find review count of the product.
-            reviewCount = fullProduct.find(class_="a-size-base")
+            #import pdb; pdb.set_trace()
+            reviewCount = fullProduct.find(class_='a-color-link')
             if(reviewCount):
                 reviewCount = reviewCount.text
+                reviewCount = reviewCount.replace(',', '')
+                if(reviewCount.isnumeric() == False):
+                    foundError(str(fullProduct), "String in reviewCount")
+            else:
+                reviewCount = fullProduct.find(class_='a-size-base')
+                if(reviewCount):
+                    reviewCount = reviewCount.text
+                    reviewCount = reviewCount.replace(',', '')
+                    if(reviewCount.isnumeric() == False):
+                        foundError(str(fullProduct), "String in reviewCount")
+                else:
+                    print("Unable to find reviewCount...")
+                    foundError(str(fullProduct), "reviewCount")
 
             productJson = {
                 "name": name,
@@ -66,7 +120,9 @@ for pageNumber in range(1, totPages + 1):
                 "starRating": starRating,
                 "reviewCount": reviewCount
             }
+            print(productJson)
             productCollection = productCollection.append(
                 productJson, ignore_index=True)
 
 print(productCollection)
+productCollection.to_csv('output.csv')
