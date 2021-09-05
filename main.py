@@ -35,6 +35,7 @@ headers = {
 
 # collect keywork from the user for scraping appropriate products from amazon.in.
 productCollection = pd.DataFrame()
+#keyList = list(input("Enter a key list (Python list)"))
 totPages = int(input("Enter the number of pages you want to scrape: "))
 for pageNumber in range(1, totPages + 1):
     page = requests.get(
@@ -57,8 +58,6 @@ for pageNumber in range(1, totPages + 1):
                 if(len(classAttr) > 2):
                     fullProduct = product.parent.parent.parent.parent.parent.parent
                     foundProduct(str(fullProduct), classAttr)
-
-
 
             # Find if product is sponsored or not.
             isSponsored = fullProduct.find(class_="s-label-popover-default")
@@ -91,6 +90,9 @@ for pageNumber in range(1, totPages + 1):
             starRating = fullProduct.find(class_='a-icon-alt')
             if(starRating):
                 starRating = starRating.text
+                starRating = starRating.split('out', 1)[0]
+                starRating = starRating.strip()
+
             else:
                 print("Unable to find starRating...")
                 foundError(str(fullProduct), "starRating")
@@ -120,9 +122,10 @@ for pageNumber in range(1, totPages + 1):
                 "starRating": starRating,
                 "reviewCount": reviewCount
             }
-            print(productJson)
-            productCollection = productCollection.append(
-                productJson, ignore_index=True)
+
+            if(not name in productCollection.values):
+                productCollection = productCollection.append(
+                    productJson, ignore_index=True)
 
 print(productCollection)
-productCollection.to_csv('output.csv')
+productCollection.to_csv('output.csv', index=False)
