@@ -4,6 +4,30 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 
+# collect keywork from the user for scraping appropriate products from amazon.in.
+productCollection = pd.DataFrame()
+keyList = []
+print("Enter a list of keys: ")
+keyCount = 1
+while True:
+    key = str(input(str(keyCount) + ") "))
+    if(key == ''):
+        break
+    else:
+        if not all(chr.isalnum() or chr.isspace() for chr in key):
+            print("The entered string contains not alphanumeric characters...")
+        else:
+            key = key.replace(' ', '+')
+            keyList.append(key)
+            keyCount = keyCount + 1
+settingsFile = open('settings.cfg', 'w+')
+settingsJson = settingsFile.read()
+print(settingsJson)
+if(settingsJson == ''):
+    print("Empty!")
+settingsFile.write(str(keyList))
+exit()
+
 f = open("output.html", "w")
 h = open("full.html", "w")
 
@@ -33,9 +57,8 @@ headers = {
     'From': 'youremail@domain.com'  # This is another valid field
 }
 
-# collect keywork from the user for scraping appropriate products from amazon.in.
-productCollection = pd.DataFrame()
-keyList = list(input("Enter a key list (Python list)"))
+
+
 totPages = int(input("Enter the number of pages you want to scrape: "))
 for pageNumber in range(1, totPages + 1):
     page = requests.get(
