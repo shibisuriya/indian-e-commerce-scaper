@@ -35,7 +35,7 @@ headers = {
 
 # collect keywork from the user for scraping appropriate products from amazon.in.
 productCollection = pd.DataFrame()
-#keyList = list(input("Enter a key list (Python list)"))
+keyList = list(input("Enter a key list (Python list)"))
 totPages = int(input("Enter the number of pages you want to scrape: "))
 for pageNumber in range(1, totPages + 1):
     page = requests.get(
