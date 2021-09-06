@@ -5,7 +5,20 @@ from bs4 import BeautifulSoup
 import pandas as pd
 
 # collect keywork from the user for scraping appropriate products from amazon.in.
-productCollection = pd.DataFrame()
+while True:
+    appendDataFrame = str(
+        input("Do you want to append the results to the existing .csv file? (y/n) "))
+    if(appendDataFrame == 'y'):
+        productCollection = pd.read_csv('output.csv')
+        break
+    elif(appendDataFrame == 'n'):
+        productCollection = pd.DataFrame(
+            columns=['Name', 'IsSponsored', 'StarRating', "ReviewCount"])
+        break
+    else:
+        print("Invalid character entered, please type y or n.")
+        continue
+
 keyList = []
 print("Enter a list of keys: ")
 keyCount = 1
@@ -20,13 +33,6 @@ while True:
             key = key.replace(' ', '+')
             keyList.append(key)
             keyCount = keyCount + 1
-settingsFile = open('settings.cfg', 'w+')
-settingsJson = settingsFile.read()
-print(settingsJson)
-if(settingsJson == ''):
-    print("Empty!")
-settingsFile.write(str(keyList))
-exit()
 
 f = open("output.html", "w")
 h = open("full.html", "w")
@@ -58,97 +64,105 @@ headers = {
 }
 
 
-
 totPages = int(input("Enter the number of pages you want to scrape: "))
-for pageNumber in range(1, totPages + 1):
-    page = requests.get(
-        'https://www.amazon.in/s?k=gaming+keyboard&ref=nb_sb_noss_2&page=' + str(pageNumber), headers=headers)
-    soup = BeautifulSoup(page.content, 'html5lib')
+for key in keyList:
+    for pageNumber in range(1, totPages + 1):
+        url = 'https://www.amazon.in/s?k=' + key + \
+            '&ref=nb_sb_noss_2&page=' + str(pageNumber)
+        page = requests.get(
+            url, headers=headers)
+        soup = BeautifulSoup(page.content, 'html5lib')
 
-    # HTML elements whose class attribute is set to 'a-icon-alt' are the elements where the star rating of a product is stored.
-    products = soup.find_all(class_="a-icon-alt")
-    print("Found ", len(products), " products in page ", pageNumber)
+        # HTML elements whose class attribute is set to 'a-icon-alt' are the elements where the star rating of a product is stored.
+        products = soup.find_all(class_="a-icon-alt")
 
-    for product in products:
-        # Eliminate the HTML elements which are used by the users to filter products based on star rating, these elements also have
-        # their class attribute set to "a-icon-alt". We are not interested in these elements because they are part of the panel which let's
-        # users sort products based on availablity, features, brand etc. These element's parent don't have any product associated with them.
+        uniqueProductCount = 0
+        productFoundInPage = 0
+        for product in products:
+            # Eliminate the HTML elements which are used by the users to filter products based on star rating, these elements also have
+            # their class attribute set to "a-icon-alt". We are not interested in these elements because they are part of the panel which let's
+            # users sort products based on availablity, features, brand etc. These element's parent don't have any product associated with them.
 
-        if('&' not in str(product)):
-            fullProduct = product.parent.parent.parent.parent.parent.parent.parent
-            classAttr = fullProduct.get('class')
-            if(set(['a-section', 'a-spacing-none']) <= set(classAttr)):
-                if(len(classAttr) > 2):
-                    fullProduct = product.parent.parent.parent.parent.parent.parent
-                    foundProduct(str(fullProduct), classAttr)
+            if('&' not in str(product)):
+                productFoundInPage += 1
+                fullProduct = product.parent.parent.parent.parent.parent.parent.parent
+                classAttr = fullProduct.get('class')
+                if(set(['a-section', 'a-spacing-none']) <= set(classAttr)):
+                    if(len(classAttr) > 2):
+                        fullProduct = product.parent.parent.parent.parent.parent.parent
+                        foundProduct(str(fullProduct), classAttr)
 
-            # Find if product is sponsored or not.
-            isSponsored = fullProduct.find(class_="s-label-popover-default")
-            if(isSponsored):
-                isSponsored = True
-            else:
-                isSponsored = False
+                # Find if product is sponsored or not.
+                isSponsored = fullProduct.find(
+                    class_="s-label-popover-default")
+                if(isSponsored):
+                    isSponsored = True
+                else:
+                    isSponsored = False
 
-            # Find product's name.
-            name = fullProduct.find(
-                class_="a-size-medium a-color-base a-text-normal")
-
-            if(name):
-                name = name.text
-            else:
+                # Find product's name.
                 name = fullProduct.find(
-                    class_="a-size-base-plus a-color-base a-text-normal")
+                    class_="a-size-medium a-color-base a-text-normal")
+
                 if(name):
                     name = name.text
                 else:
                     name = fullProduct.find(
-                        class_="a-truncate-full")
+                        class_="a-size-base-plus a-color-base a-text-normal")
                     if(name):
                         name = name.text
                     else:
-                        print("Failed to extract products contact developer...")
-                        foundError(str(fullProduct), "name")
+                        name = fullProduct.find(
+                            class_="a-truncate-full")
+                        if(name):
+                            name = name.text
+                        else:
+                            print("Failed to extract products contact developer...")
+                            foundError(str(fullProduct), "name")
 
-            # Find start rating of the product.
-            starRating = fullProduct.find(class_='a-icon-alt')
-            if(starRating):
-                starRating = starRating.text
-                starRating = starRating.split('out', 1)[0]
-                starRating = starRating.strip()
+                # Find start rating of the product.
+                starRating = fullProduct.find(class_='a-icon-alt')
+                if(starRating):
+                    starRating = starRating.text
+                    starRating = starRating.split('out', 1)[0]
+                    starRating = starRating.strip()
 
-            else:
-                print("Unable to find starRating...")
-                foundError(str(fullProduct), "starRating")
+                else:
+                    print("Unable to find starRating...")
+                    foundError(str(fullProduct), "starRating")
 
-            # Find review count of the product.
-            #import pdb; pdb.set_trace()
-            reviewCount = fullProduct.find(class_='a-color-link')
-            if(reviewCount):
-                reviewCount = reviewCount.text
-                reviewCount = reviewCount.replace(',', '')
-                if(reviewCount.isnumeric() == False):
-                    foundError(str(fullProduct), "String in reviewCount")
-            else:
-                reviewCount = fullProduct.find(class_='a-size-base')
+                # Find review count of the product.
+                #import pdb; pdb.set_trace()
+                reviewCount = fullProduct.find(class_='a-color-link')
                 if(reviewCount):
                     reviewCount = reviewCount.text
                     reviewCount = reviewCount.replace(',', '')
                     if(reviewCount.isnumeric() == False):
                         foundError(str(fullProduct), "String in reviewCount")
                 else:
-                    print("Unable to find reviewCount...")
-                    foundError(str(fullProduct), "reviewCount")
+                    reviewCount = fullProduct.find(class_='a-size-base')
+                    if(reviewCount):
+                        reviewCount = reviewCount.text
+                        reviewCount = reviewCount.replace(',', '')
+                        if(reviewCount.isnumeric() == False):
+                            foundError(str(fullProduct),
+                                       "String in reviewCount")
+                    else:
+                        print("Unable to find reviewCount...")
+                        foundError(str(fullProduct), "reviewCount")
 
-            productJson = {
-                "name": name,
-                "isSponsored": isSponsored,
-                "starRating": starRating,
-                "reviewCount": reviewCount
-            }
+                productJson = {
+                    "Name": name,
+                    "IsSponsored": isSponsored,
+                    "StarRating": starRating,
+                    "ReviewCount": reviewCount
+                }
 
-            if(not name in productCollection.values):
-                productCollection = productCollection.append(
-                    productJson, ignore_index=True)
-
+                if(not name in productCollection.values):
+                    productCollection = productCollection.append(
+                        productJson, ignore_index=True)
+                    uniqueProductCount += 1
+        print("Found ", productFoundInPage, " products in ", url,
+              " out of which ", uniqueProductCount, " are new.")
 print(productCollection)
 productCollection.to_csv('output.csv', index=False)
