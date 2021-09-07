@@ -3,8 +3,66 @@ from os import stat_result
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
+import time
+import datetime
 
-# collect keywork from the user for scraping appropriate products from amazon.in.
+# enable debug mode?
+while True:
+    enableDebugMode = str(input("Do you want to enable debug mode? (y/n) "))
+    if(enableDebugMode == 'y'):
+        enableDebugMode = True
+        break
+    elif(enableDebugMode == 'n'):
+        enableDebugMode = False
+        break
+    else:
+        print("Invalid character entered, please enter y or n.")
+
+# Write entire page
+if(enableDebugMode == True):
+    entirePageFile = open("All HTML Pages.html", "w")
+    entirePageFile.write(
+        "<style>\
+            .fullPage {border: 150px solid green;} .s-desktop-width-max1 {max-width: 100%;} \
+            .a-icon-alt-red {border: 5px solid red; margin: 2px; padding: 2px;} \
+            .a-icon-alt-green {border: 5px solid #00FF00; margin: 2px; padding: 2px;} \
+            .pageInformation {border: 3px solid black; padding: 1em; margin: 1em;} \
+        </style>")
+
+
+def writeEntirePage(soup, productFoundInPage, uniqueProductCount):
+    entirePageFile.write('<div class="pageInformation">')
+    entirePageFile.write(str(productFoundInPage))
+    entirePageFile.write("</div>")
+    soup.find("header", {"id": "navbar-main"}).decompose()
+    soup.find("div", {"id": "navFooter"}).decompose()
+    soup.find(class_= "a-dropdown-container").decompose()
+    #, style="background-color: black; border: 1px solid black; color: white; font-size:3em;border-radius:5em;"
+    test = BeautifulSoup().new_tag('<span style="background-color: black; border: 1px solid black; color: white; font-size:3em;border-radius:5em;">1</span>')  
+    soup.find(
+        class_="s-desktop-width-max s-desktop-content s-opposite-dir sg-row")['class'] = "s-desktop-width-max1 s-desktop-content s-opposite-dir sg-row"
+    icons = soup.find_all(class_='a-icon-alt')
+    for icon in icons:
+        if('&' not in str(icon)):
+            icon.parent.parent['class'] = 'a-icon-alt-green'
+            icon.parent.append(test)
+            print(icon.parent.parent.parent)
+            
+            #print(test)
+        else:
+            icon.parent.parent['class'] = 'a-icon-alt-red'
+            icon.parent.parent.parent.append(test)
+
+
+
+    # print(icons)
+
+    entirePageFile.write('<div class="fullPage">')
+    entirePageFile.write(soup.prettify())
+    entirePageFile.write("</div>")
+
+
+# collect keywords from the user for scraping appropriate products from amazon.in.
 while True:
     appendDataFrame = str(
         input("Do you want to append the results to the existing .csv file? (y/n) "))
@@ -13,10 +71,10 @@ while True:
         break
     elif(appendDataFrame == 'n'):
         productCollection = pd.DataFrame(
-            columns=['Name', 'IsSponsored', 'StarRating', "ReviewCount"])
+            columns=['Name', 'IsSponsored', 'StarRating', "ReviewCount", "Timestamp"])
         break
     else:
-        print("Invalid character entered, please type y or n.")
+        print("Invalid character entered, please enter y or n.")
         continue
 
 keyList = []
@@ -85,6 +143,8 @@ for key in keyList:
 
             if('&' not in str(product)):
                 productFoundInPage += 1
+                timestamp = datetime.datetime.fromtimestamp(
+                    time.time()).strftime('%d-%m-%Y %H:%M:%S')
                 fullProduct = product.parent.parent.parent.parent.parent.parent.parent
                 classAttr = fullProduct.get('class')
                 if(set(['a-section', 'a-spacing-none']) <= set(classAttr)):
@@ -155,13 +215,16 @@ for key in keyList:
                     "Name": name,
                     "IsSponsored": isSponsored,
                     "StarRating": starRating,
-                    "ReviewCount": reviewCount
+                    "ReviewCount": reviewCount,
+                    "Timestamp": timestamp
                 }
 
                 if(not name in productCollection.values):
                     productCollection = productCollection.append(
                         productJson, ignore_index=True)
                     uniqueProductCount += 1
+        if(enableDebugMode == True):
+            writeEntirePage(soup, productFoundInPage, uniqueProductCount)
         print("Found ", productFoundInPage, " products in ", url,
               " out of which ", uniqueProductCount, " are new.")
 print(productCollection)
