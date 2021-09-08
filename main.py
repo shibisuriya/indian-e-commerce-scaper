@@ -27,33 +27,36 @@ if(enableDebugMode == True):
             .a-icon-alt-red {border: 5px solid red; margin: 2px; padding: 2px;} \
             .a-icon-alt-green {border: 5px solid #00FF00; margin: 2px; padding: 2px;} \
             .pageInformation {border: 3px solid black; padding: 1em; margin: 1em;} \
+            .badge {background-color: black; border: 1px solid black; color: white; font-size:2em;border-radius:1em;} \
         </style>")
 
 
-def writeEntirePage(soup, productFoundInPage, uniqueProductCount):
+def writeEntirePage(soup, productFoundInPage, uniqueProductCount, totalStarElementFoundInpage):
     entirePageFile.write('<div class="pageInformation">')
-    entirePageFile.write(str(productFoundInPage))
+    entirePageFile.write("<div>Total StarElements found in page = " + str(totalStarElementFoundInpage) + " </div>")
+    entirePageFile.write("<div>Valid products found in page = " + str(productFoundInPage) + " </div>")
     entirePageFile.write("</div>")
     soup.find("header", {"id": "navbar-main"}).decompose()
     soup.find("div", {"id": "navFooter"}).decompose()
-    soup.find(class_= "a-dropdown-container").decompose()
-    #, style="background-color: black; border: 1px solid black; color: white; font-size:3em;border-radius:5em;"
-    test = BeautifulSoup().new_tag('<span style="background-color: black; border: 1px solid black; color: white; font-size:3em;border-radius:5em;">1</span>')  
+    soup.find(class_="a-dropdown-container").decompose()
+    soup.find(id="skiplink").decompose()
+
     soup.find(
         class_="s-desktop-width-max s-desktop-content s-opposite-dir sg-row")['class'] = "s-desktop-width-max1 s-desktop-content s-opposite-dir sg-row"
     icons = soup.find_all(class_='a-icon-alt')
-    for icon in icons:
+    for index, icon in enumerate(icons):
+        badge = soup.new_tag('span', attrs={"class": "badge"})
+        badge.string = str(index + 1)
+
         if('&' not in str(icon)):
             icon.parent.parent['class'] = 'a-icon-alt-green'
-            icon.parent.append(test)
+            icon.parent.append(badge)
             print(icon.parent.parent.parent)
-            
-            #print(test)
+
+            # print(test)
         else:
             icon.parent.parent['class'] = 'a-icon-alt-red'
-            icon.parent.parent.parent.append(test)
-
-
+            icon.parent.parent.parent.append(badge)
 
     # print(icons)
 
@@ -192,7 +195,7 @@ for key in keyList:
                     foundError(str(fullProduct), "starRating")
 
                 # Find review count of the product.
-                #import pdb; pdb.set_trace()
+                # import pdb; pdb.set_trace()
                 reviewCount = fullProduct.find(class_='a-color-link')
                 if(reviewCount):
                     reviewCount = reviewCount.text
@@ -224,7 +227,7 @@ for key in keyList:
                         productJson, ignore_index=True)
                     uniqueProductCount += 1
         if(enableDebugMode == True):
-            writeEntirePage(soup, productFoundInPage, uniqueProductCount)
+            writeEntirePage(soup, productFoundInPage, uniqueProductCount, len(products))
         print("Found ", productFoundInPage, " products in ", url,
               " out of which ", uniqueProductCount, " are new.")
 print(productCollection)
