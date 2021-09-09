@@ -9,3 +9,7 @@
 
 ## Result:
 ![Alt text](https://github.com/shibisuriya/Amazon-Web-Scraper/blob/master/screenshorts/Screenshot%20from%202021-09-08%2010-57-58.png?raw=true "Result")
+
+## Debugger output
+![Alt text](https://github.com/shibisuriya/Amazon-Web-Scraper/blob/master/screenshorts/Screenshot%20from%202021-09-09%2020-04-29.png?raw=true "Result")
+

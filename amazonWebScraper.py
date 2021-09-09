@@ -29,6 +29,7 @@ args = parser.parse_args()
 print(args)
 
 # enable debug mode?
+enableDebugMode = args.debugger
 if(args.debugger == True):
     print("debugger is one")
     # Write entire page
