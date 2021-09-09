@@ -1,37 +1,50 @@
 # Scraper works as on Sep 3 2021
-from os import stat_result
+import argparse
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import time
 import datetime
+from argparse import RawTextHelpFormatter
+
+parser = argparse.ArgumentParser(
+    prog='amazonWebScaper', description='''Scrape products from wwww.amazon.in and sort them based on \'number of reviews\', \'start rating\', \'price\',  etc.''',
+    epilog='Happying shopping! :)\nWritten by https://www.github.com/shibisuriya', formatter_class=RawTextHelpFormatter)
+parser.add_argument('-d', '--debugger', action='store_true',
+                    help='''Send all scraped pages to the debugger (debugger writes the HTML pages sent to it in the folder ./DebuggerOutput after some processing like \nremoving nav bar, footer, highlighting the starElements, etc. These HTML pages can then be used by users to debug the script.)''')
+
+parser.add_argument('-dz', '--debugger-zero', action='store_true',
+                    help='''Send pages which contain zero starElements to the debugger (debugger writes the HTML pages sent to it in the folder ./DebuggerOutput after \nsome processing like removing nav bar, footer, highlighting the starElements, etc. These HTML pages can then be used by users to debug the script.)''')
+
+parser.add_argument('-t', '--delay', nargs=2, metavar=('min_sec', 'max_sec'), type=int,
+                    help='''Introduce random delays between requests (This is to prevent Amazon.in from detecting that we are an internet bot). \nThe script will generate a random number \'x\' between min_sec and max_sec, and will introduce a delay of \'x\' seconds between requests.''')
+
+parser.add_argument("-k", "--keyword", default=[], nargs='+',
+                    help='''Enter one or more keywords. These keywords will be used to query Amazon.in, if your keywords have multiple words like 'mechanical keyboards'\nor 'gaming keyboard' then type them inbetween single or double quotes followed by white space.\nFor example, --keyword 'mechanical keyboard' "gaming keyboard" "keyboard"''')
+
+parser.add_argument('-a', '--append', action="store_true",
+                    help='''Append the results to output.csv, if this option is not used then the script will overwrite output.csv file.''')
+
+args = parser.parse_args()
+print(args)
 
 # enable debug mode?
-while True:
-    enableDebugMode = str(input("Do you want to enable debug mode? (y/n) "))
-    if(enableDebugMode == 'y'):
-        enableDebugMode = True
-        break
-    elif(enableDebugMode == 'n'):
-        enableDebugMode = False
-        break
-    else:
-        print("Invalid character entered, please enter y or n.")
-
-# Write entire page
-if(enableDebugMode == True):
+if(args.debugger == True):
+    print("debugger is one")
+    # Write entire page
+    # Clear debugger file
     entirePageFile = open("debugger_output.html", "w")
     entirePageFile.write(
-        "<style> \
-            .fullPage {border-left: 90px solid green; border-right: 90px solid green; max-width: 100%; margin: 2em auto;} \
-            .s-desktop-width-max1 {max-width: 100%;} \
-            .a-icon-alt-red {border: 5px solid red; margin: 2px; padding: 2px;} \
-            .a-icon-alt-green {border: 5px solid #00FF00; margin: 2px; padding: 2px;} \
-            .pageInformation {border: 3px solid black; color: white; margin: 0 auto; max-width: 100%; background-color: black; padding: 1.2em; font-size: 1.5em;} \
-            .badge-red {background-color: red; border: 1px solid black; color: white; font-size:2em;border-radius:1em;} \
-            .badge-green {background-color: green; border: 1px solid black; color: white; font-size:2em;border-radius:1em;} \
-            .pageInformationChild {margin: 1em;} \
-        </style>")
+    "<style> \
+        .fullPage {border-left: 90px solid green; border-right: 90px solid green; max-width: 100%; margin: 2em auto;} \
+        .s-desktop-width-max1 {max-width: 100%;} \
+        .a-icon-alt-red {border: 5px solid red; margin: 2px; padding: 2px;} \
+        .a-icon-alt-green {border: 5px solid #00FF00; margin: 2px; padding: 2px;} \
+        .pageInformation {border: 3px solid black; color: white; margin: 0 auto; max-width: 100%; background-color: black; padding: 1.2em; font-size: 1.5em;} \
+        .badge-red {background-color: red; border: 1px solid black; color: white; font-size:2em;border-radius:1em;} \
+        .badge-green {background-color: green; border: 1px solid black; color: white; font-size:2em;border-radius:1em;} \
+        .pageInformationChild {margin: 1em;} \
+    </style>")
 
 
 def writeEntirePage(soup, productFoundInPage, uniqueProductCount, totalStarElementFoundInpage, url):
@@ -40,7 +53,8 @@ def writeEntirePage(soup, productFoundInPage, uniqueProductCount, totalStarEleme
                          str(totalStarElementFoundInpage) + " </div>")
     entirePageFile.write(
         "<div class='pageInformationChild'>Valid products found in page = " + str(productFoundInPage) + " </div>")
-    entirePageFile.write("<div class='pageInformationChild'>URL = " + str(url) + " </div>")
+    entirePageFile.write(
+        "<div class='pageInformationChild'>URL = " + str(url) + " </div>")
     entirePageFile.write("</div>")
 
     # Remove unwanted elements.
@@ -233,6 +247,22 @@ for key in keyList:
                     productCollection = productCollection.append(
                         productJson, ignore_index=True)
                     uniqueProductCount += 1
+
+        # Give user the option to send page to the debugger function when the script finds 0 star element in the html.
+        # Sometimes amazon.in detects that we are a bot and it drops our requests.
+        if(enableDebugMode == False and productFoundInPage == 0):
+            while True:
+                userChoice = str(input(
+                    "0 star elements found in the page. Do you want to send this page to the debugger? (y/n) "))
+                if(userChoice == 'y'):
+                    writeEntirePage(soup, productFoundInPage,
+                                    uniqueProductCount, len(products), url)
+                    break
+                elif(userChoice == 'n'):
+                    break
+                else:
+                    print("Invalid input entered. Please enter y or n...")
+
         if(enableDebugMode == True):
             writeEntirePage(soup, productFoundInPage,
                             uniqueProductCount, len(products), url)
