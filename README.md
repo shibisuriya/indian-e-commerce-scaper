@@ -1,4 +1,4 @@
-# A python script to find the best products in Amazon.in
+# A Python script to scrape products from Amazon.in and sort them based on 'number of reviews', 'star rating', 'price', etc.
 ## Example
 `python3 amazonWebScaper.py -t 5 10 -k 'gaming keyboard' 'keyboard' 'mechanical keyboard' -a` 
 
