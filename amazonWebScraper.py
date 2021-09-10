@@ -6,6 +6,8 @@ import pandas as pd
 import time
 import datetime
 from argparse import RawTextHelpFormatter
+import os
+import random
 
 parser = argparse.ArgumentParser(
     prog='amazonWebScaper', description='''Scrape products from wwww.amazon.in and sort them based on \'number of reviews\', \'start rating\', \'price\',  etc.''',
@@ -25,6 +27,13 @@ parser.add_argument("-k", "--keyword", default=[], nargs='+',
 parser.add_argument('-a', '--append', action="store_true",
                     help='''Append the results to output.csv, if this option is not used then the script will overwrite output.csv file.''')
 
+parser.add_argument('-p', '--page', nargs=1, metavar='NUMBER_OF_PAGE', type=int,
+                    help='''Enter the number of pages to scrape per keyword.''')
+
+parser.add_argument('--batch', action='store_true',
+                    help='''Avoid asking for user inputs (optional options), and use default options wherever possible.''')
+
+
 args = parser.parse_args()
 print(args)
 
@@ -36,7 +45,7 @@ if(args.debugger == True):
     # Clear debugger file
     entirePageFile = open("debugger_output.html", "w")
     entirePageFile.write(
-    "<style> \
+        "<style> \
         .fullPage {border-left: 90px solid green; border-right: 90px solid green; max-width: 100%; margin: 2em auto;} \
         .s-desktop-width-max1 {max-width: 100%;} \
         .a-icon-alt-red {border: 5px solid red; margin: 2px; padding: 2px;} \
@@ -87,31 +96,43 @@ def writeEntirePage(soup, productFoundInPage, uniqueProductCount, totalStarEleme
     entirePageFile.write("</div>")
 
 
-# collect keywords from the user for scraping appropriate products from amazon.in.
-while True:
-    appendDataFrame = str(
-        input("Do you want to append the results to the existing .csv file? (y/n) "))
-    if(appendDataFrame == 'y'):
-        productCollection = pd.read_csv('output.csv')
-        break
-    elif(appendDataFrame == 'n'):
-        productCollection = pd.DataFrame(
-            columns=['Name', 'IsSponsored', 'StarRating', "ReviewCount", "Timestamp"])
-        break
-    else:
-        print("Invalid character entered, please enter y or n.")
-        continue
+if(args.append == True):
+    productCollection = pd.read_csv('output.csv')
+else:
+    if os.path.getsize('output.csv') != 0:
+        while True:
+            overwriteChoice = str(
+                input('output.csv is not empty! Do you want to overwrite it? (y / n) '))
+            if(overwriteChoice == 'y'):
+                productCollection = pd.DataFrame(
+                    columns=['Name', 'IsSponsored', 'StarRating', "ReviewCount", "Timestamp"])
+                break
+            elif(overwriteChoice == 'n'):
+                productCollection = pd.read_csv('output.csv')
 
+
+# Collecting keywords from the user.
 keyList = []
-print("Enter a list of keys: ")
 keyCount = 1
-while True:
-    key = str(input(str(keyCount) + ") "))
-    if(key == ''):
-        break
-    else:
+# Normal mode
+if(len(args.keyword) == 0):
+    print("Enter a list of keys: ")
+    while True:
+        key = str(input(str(keyCount) + ") "))
+        if(key == ''):
+            break
+        else:
+            if not all(chr.isalnum() or chr.isspace() for chr in key):
+                print("The entered string contains not alphanumeric characters...")
+            else:
+                key = key.replace(' ', '+')
+                keyList.append(key)
+                keyCount = keyCount + 1
+# Command link mode
+else:
+    for key in args.keyword:
         if not all(chr.isalnum() or chr.isspace() for chr in key):
-            print("The entered string contains not alphanumeric characters...")
+            parser.error('Keywords contain non alphanumeric characters...')
         else:
             key = key.replace(' ', '+')
             keyList.append(key)
@@ -248,6 +269,13 @@ for key in keyList:
                     productCollection = productCollection.append(
                         productJson, ignore_index=True)
                     uniqueProductCount += 1
+                
+                # Introduce random delay between requests.
+       
+        if(len(args.delay) == 2):
+            randomNumber = random.randint(args.delay[0], args.delay[1])
+            print("random delay = ", randomNumber)
+            time.sleep(randomNumber)
 
         # Give user the option to send page to the debugger function when the script finds 0 star element in the html.
         # Sometimes amazon.in detects that we are a bot and it drops our requests.
