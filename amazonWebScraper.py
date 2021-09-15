@@ -9,7 +9,9 @@ from argparse import RawTextHelpFormatter
 import os
 import random
 from debugger import writeEntirePage
+from verbose import verbosePrint
 from headers import headers
+import json
 
 # Parsing commandline arguments.
 parser = argparse.ArgumentParser(
@@ -19,12 +21,12 @@ parser.add_argument('-d', '--debugger', action='store_true',
                     help='''Send all scraped pages to the debugger (debugger writes the HTML pages sent to it in the folder ./DebuggerOutput after some processing like \nremoving nav bar, footer, highlighting the starElements, etc. These HTML pages can then be used by users to debug the script).''')
 
 parser.add_argument('-dz', '--debugger-zero', action='store_true',
-                    help='''Send pages which contain zero starElements to the debugger (debugger writes the HTML pages sent to it in the folder ./DebuggerOutput after \nsome processing like removing nav bar, footer, highlighting the starElements, etc. These HTML pages can then be used by users to debug the script).''')
+                    help='''Send pages which contain zero starElements to the debugger (debugger writes the HTML pages sent to it in the folder ./DebuggerOutput after \nsome processing like removing nav bar, footer, highlighting the starElements, etc. These HTML pages can then be used by users to debug the script).\nWhen the script finds 0 starElements in the scraped page most probably Amazon.in would have found out that we are an internet bot and would have sent\nus a HTML page with captcha in it or Amazon.in would have dropped our http request.''')
 
 parser.add_argument('-t', '--delay', nargs=2, metavar=('min_sec', 'max_sec'), type=int,
-                    help='''Introduce random delays between requests (This is to prevent Amazon.in from detecting that we are an internet bot). \nThe script will generate a random number \'x\' between min_sec and max_sec, and will introduce a delay of \'x\' seconds between requests.''')
+                    help='''Introduce random delays between requests (This is to prevent Amazon.in from detecting that we are an internet bot). \nThe script will generate a random number \'x\' between min_sec and max_sec, and will introduce a delay of \'x\' seconds between requests. \nNote: 'min_sec' should be less than'max_sec'. ''')
 
-parser.add_argument("-k", "--keyword", default=[], nargs='+',
+parser.add_argument("-k", "--keywords", default=[], nargs='+',
                     help='''Enter one or more keywords. These keywords will be used to query Amazon.in, if your keywords have multiple words like 'mechanical keyboards'\nor 'gaming keyboard' then type them inbetween single or double quotes followed by white space.\nFor example, --keyword 'mechanical keyboard' "gaming keyboard" "keyboard"''')
 
 parser.add_argument('-a', '--append', action="store_true",
@@ -39,14 +41,36 @@ parser.add_argument('--rerun', metavar='NUMBER_OF_TIMES', type=int,
 parser.add_argument('--batch', action='store_true',
                     help='''Avoid asking for user inputs (optional options), and use default options wherever possible. Used for non-interactive sessions or for scripting...''')
 
+parser.add_argument('--use-settings-from-last-session', action='store_true',
+                    help='''Use the settings used by the user in the most recent session. The script stores the command line arguements and other options used by the user\nin settings.cfg file before exiting properly. When this --use-settings-from-last-session is used the script loads the options and other\nsettings from settings.cfg file and applies it to the current session.''')
+
+parser.add_argument('--verbose', action='store_true',
+                    help='''Provide addition details as to what the script is doing, useful while debugging or testing.''')
+
+
 args = parser.parse_args()
 print(args)
+verbose = args.verbose
 
-# enable debug mode?
+# See if any other option is entered simultaneously with --use-settings-from-last-session
+if(args.use_settings_from_last_session == True):
+    used = args.append or args.batch or args.debugger or args.debugger_zero or args.verbose
+    used = used or (args.delay is not None) or len(args.keywords) > 0 or (args.page is not None) or (args.rerun is not None)
+    if(used):
+        parser.error('You cannot use the option --use-settings-from-last-session with any other option(s)...')
+
+
+# Disable debugger_zero mode when debug mode is on. We don't want to log a single page twice.
 enableDebugMode = args.debugger
+enableZeroDebugMode = args.debugger_zero
+if(enableDebugMode and enableDebugMode):
+    enableZeroDebugMode = False
+    verbosePrint(verbose, "--debugger_zero set to False since --debugger is True.", "Note")
 
 if(args.append == True):
     productCollection = pd.read_csv('output.csv')
+    verbosePrint("Opening output.csv to write results.", verbose, "Note")
+
 else:
     if os.path.getsize('output.csv') != 0:
         if(args.batch == True):
@@ -62,12 +86,15 @@ else:
                     break
                 elif(overwriteChoice == 'n'):
                     productCollection = pd.read_csv('output.csv')
+                    break;
+                else:
+                    print('Invalid choice entered. Please type y or n...')
 
 # Collecting keywords from the user.
 keyList = []
 keyCount = 1
 # Normal mode
-if(len(args.keyword) == 0):
+if(len(args.keywords) == 0):
     print("Enter a list of keys: ")
     while True:
         key = str(input(str(keyCount) + ") "))
@@ -83,7 +110,7 @@ if(len(args.keyword) == 0):
                 keyCount = keyCount + 1
 # Command line mode
 else:
-    for key in args.keyword:
+    for key in args.keywords:
         if not all(chr.isalnum() or chr.isspace() for chr in key):
             parser.error('Keywords contain non alphanumeric characters...')
         else:
@@ -227,3 +254,19 @@ for key in keyList:
 
 print(productCollection)
 productCollection.to_csv('output.csv', index=False)
+if(not args.use_settings_from_last_session):        
+    settingsFiles = open('settings.cfg', 'w')
+    settings = {
+        '--debugger': args.debugger,
+        '--debugger-zero': args.debugger_zero,
+        '--delay': args.delay,
+        '--keywords': args.keywords,
+        '--append': args.append,
+        '--page': args.page,
+        '--rerun': args.rerun,
+        '--batch': args.batch,
+        '--verbose': args.verbose
+    }
+    settings = json.dumps(settings, indent=4, sort_keys=True)
+    settingsFiles.write(settings)
+    settingsFiles.close()

@@ -1,0 +1,1 @@
+1) When both the flag --debugger and --debugger-zero is set then log the page only once.
