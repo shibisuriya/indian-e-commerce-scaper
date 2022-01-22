@@ -7,7 +7,7 @@ def writeEntirePage(fileName, soup, productFoundInPage, uniqueProductCount, tota
     if not os.path.isdir("DebuggerOutput"):
         print("DebuggerOutput directory doesn't exist... Creating DebuggerOutput directory...")
         try: 
-            os.makedir("DebuggerOutput")
+            os.makedir("DebuggerOutput", mode = 0o666)
         except:
             sys.exit("Unable to create DebuggerOutput directory...")
             
