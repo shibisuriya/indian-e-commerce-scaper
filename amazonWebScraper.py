@@ -1,6 +1,8 @@
 # Scraper works as on Sep 3 2021
 import argparse
 import requests
+import random  
+import string 
 from bs4 import BeautifulSoup
 import pandas as pd
 import time
@@ -10,8 +12,13 @@ import os
 import random
 from debugger import writeEntirePage
 from verbose import verbosePrint
-from headers import headers
 import json
+def specific_string(length):  
+    sample_string = 'pqrstuvwxyaksdjhkasdlkjqluwoelkansldknc' # define the specific string  
+    # define the condition for random string  
+    result = ''.join((random.choice(sample_string)) for x in range(length))  
+    return result
+
 # Parsing commandline arguments.
 parser = argparse.ArgumentParser(
     prog='amazonWebScaper', description='''Scrape products from wwww.amazon.in and sort them based on \'number of reviews\', \'start rating\', \'price\',  etc. \nSupports both wizard mode and command line mode.''',
@@ -118,6 +125,10 @@ for key in keyList:
     for pageNumber in range(1, totPages + 1):
         url = 'https://www.amazon.in/s?k=' + key + \
             '&ref=nb_sb_noss_2&page=' + str(pageNumber)
+        headers = {
+            'User-Agent': specific_string(random.randint(1,999)),
+            'From': specific_string(random.randint(1,999)) 
+        }
         page = requests.get(
             url, headers=headers)
         soup = BeautifulSoup(page.content, 'html5lib')
