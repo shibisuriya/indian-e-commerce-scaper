@@ -45,16 +45,24 @@ def get_rows():
     return 50
 
 def get_params(p = 1): 
-    return  {
-        'f': 'Brand:NUSYL::Gender:boys,boys girls',
+    o = '0'
+    rows = get_rows()
+    if(p == 1): 
+        o = '0'
+    else:
+        o = str((p - 1 ) * rows - 1)
+    params = {
+        'f': 'Gender:men,men women',
         'p': str(p),
-        'rf': 'Price:104.0_803.0_104.0 TO 803.0',
-        'rows': str(get_rows()),
-        'o': '49',
+        'o': o,   
+        'rows': str(rows),
         'plaEnabled': 'false',
         'xdEnabled': 'false',
         'pincode': '',
     }
+    if(p == 1):
+        del params['p']
+    return params
 
 
 def get_total_pages():
@@ -72,17 +80,19 @@ def get_key():
 def make_request(p = 1):
     cookies = get_cookies()
     headers = get_headers()
-    params = get_params()
+    params = get_params(p)
     key = get_key()
+    print('key -> ', key, ' params -> ', params)
     response = json.loads(requests.get('https://www.myntra.com/gateway/v2/search/' + key, params=params, cookies=cookies, headers=headers).text)
     return response
 
 def get_products(p = 1):
-    response = make_request()
+    response = make_request(p)
     return response['products']
 
 unique_product_ids = set()
 unique_products = []
+non_unique_products = []
 total_pages = get_total_pages()
 for i in range(1, total_pages+1):
     products = get_products(i)
@@ -90,12 +100,22 @@ for i in range(1, total_pages+1):
         if product["productId"] not in unique_product_ids:
             unique_product_ids.add(product["productId"])
             unique_products.append(product)
+        else: 
+            non_unique_products.append(product)
 
-fieldnames = ["productId", "productName", "price", "rating", "ratingCount"]
-with open("myntra.csv", "w", newline="") as csvfile:
+fieldnames = ["productId", "productName", "price", "rating", "ratingCount", "searchImage"]
+with open("unique-products.csv", "w", newline="") as csvfile:
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
     writer.writeheader()
     for product in unique_products:
+        row = {key: product[key] for key in fieldnames}
+        writer.writerow(row)
+
+
+with open("non-unique-products.csv", "w", newline="") as csvfile:
+    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+    writer.writeheader()
+    for product in non_unique_products:
         row = {key: product[key] for key in fieldnames}
         writer.writerow(row)
 
