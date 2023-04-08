@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Amazon web scraper</title>
+    <head>
+      <script src="https://unpkg.com/vue@3.2.6/dist/vue.global.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    </head>
+    <style>
+      .item {
+        margin: 60px auto;
+        padding: 30px;
+        font-size: 16px !important;
+        border: 3px solid black;
+      }
+    </style>
+  </head>
+  <body>
+    <body>
+      <div id="app">
+        <!-- Your Vue app code here -->
+        <div>
+          <input type="text" v-model="input" placeholder="Item to search for" />
+          <button @click="startScraping">Start Scraping</button>
+          <div>
+            <div class="item" v-for="item in data">
+              <div v-html="item.html"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        const app = Vue.createApp({
+          data() {
+            return { input: "", data: "" };
+          },
+          methods: {
+            test() {
+              return undefined;
+            },
+            startScraping() {
+              axios
+                .post("http://127.0.0.1:4000/api/scrape", {
+                  keys: [this.input],
+                })
+                .then(({ data }) => {
+                  this.data = data;
+                  console.log("data -> ", data);
+                })
+                .catch((error) => {
+                  console.log(error);
+                });
+            },
+          },
+        });
+
+        app.mount("#app");
+      </script>
+    </body>
+  </body>
+</html>
