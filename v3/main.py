@@ -1,49 +1,39 @@
 import csv
 import re
-from utils import get_star_elements, get_soup, is_last_page, get_key 
+from utils import get_star_elements, get_soup, is_last_page, get_key, get_item_from_star_element
 import os
+from print import print_yellow, print_blue, print_red
 
-
-
-
-
-# Reset all formatting
-RESET = "\033[0m"
-
-# Colors
-RED = "\033[31m"
-GREEN = "\033[32m"
-YELLOW = "\033[33m"
-BLUE = "\033[34m"
-MAGENTA = "\033[35m"
-CYAN = "\033[36m"
-WHITE = "\033[37m"
-
-# Example usage
 
 hash = {}
 page_number = 1
 file_name = './data.csv' 
-if os.path.isfile(file_name):
-    # File exists, proceed with reading and writing
+does_file_exists = bool(os.path.isfile(file_name))
+if does_file_exists:
     with open(file_name, "r") as file:
         reader = csv.reader(file, delimiter='|')
         existing_items = list(reader)
         for item in existing_items:
             title, image, *_ = item 
-            if(get_key(title, image) not in hash):
-                hash[get_key(title, image)] = item
+            key = get_key(title, image) 
+            if(key not in hash):
+                hash[key] = item
             else:
-                print(RED + 'The file is corrupt! It contains duplicate elements! Delete the file to continue!', RESET)
+                print_red('The file is corrupt! It contains duplicate elements! Delete the file and re-run the script!')
+                exit()
 
 with open(file_name, "a") as file:
     writer = csv.writer(file, delimiter='|')
+    # write header, since the file is new.
+    if not does_file_exists: 
+        print_blue("File doesn't exist, created a new file!")
+        writer.writerow(['title', 'image', 'rating', 'number of reviews'])
     while True:
         page = get_soup(page_number)
         elements = get_star_elements(page) 
-        print(YELLOW + f"Found {len(elements)} products in page {page_number}." + RESET)
+        print_yellow(f"Found {len(elements)} products in page {page_number}.")
         for index, element in enumerate(elements):
-            item = element.parent.parent.parent.parent.parent.parent.parent.parent.parent
+            item = get_item_from_star_element(element) 
             image = item.find('img', class_='s-image') 
             if(image):
                 image = image['src']
@@ -60,9 +50,10 @@ with open(file_name, "a") as file:
 
             number_of_reviews = item.find('span', class_="a-size-base s-underline-text").text
 
-            if(get_key(title, image) not in hash):
-                print(BLUE + f"Found new item, {title}." + RESET)
-                hash[get_key(title, image)] = [ title, image, rating, number_of_reviews]
+            key = get_key(title, image) 
+            if(key not in hash):
+                print_blue(f"Found new item, {title}.")
+                hash[key] = [ title, image, rating, number_of_reviews]
                 writer.writerow([ title, image, rating, number_of_reviews])
 
         if(is_last_page(page)):

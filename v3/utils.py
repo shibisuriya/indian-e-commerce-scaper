@@ -4,6 +4,10 @@ import random
 from bs4 import BeautifulSoup
 
 
+def get_item_from_star_element(star_element):
+    return star_element.parent.parent.parent.parent.parent.parent.parent.parent.parent
+
+
 def get_key(title, image):
     return f"{title}-{image}"
 
@@ -33,6 +37,9 @@ params = {
 
 
 def is_last_page(page):
+    # There is some issues with this function, when the next-button is disabled
+    # soup.find() doesn't find the next-button even though the button exist in 
+    # the html file... 
     next_button = page.find('a', class_="s-pagination-next")
     if(next_button):
         classes_list = next_button['class']
