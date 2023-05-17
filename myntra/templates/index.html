@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Vue.js Example</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script> <!-- Include Vue.js from a CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+</head>
+
+<body>
+    <div id="app">
+        <div class="flex items-center" v-for="item, index in items" :key="index">
+            <div>
+                <a :href="'https://www.myntra.com/' + item.landingPageUrl" target="_blank">Go to</a>
+            </div>
+            <div>
+                <img :src="item.searchImage" style="height: 300px;" />
+            </div>
+        </div>
+    </div>
+
+    <script>
+        new Vue({
+            el: '#app',
+            data: {
+                message: 'Hello, Vue.js!',
+                items: []
+            },
+            mounted() {
+                this.getItems()
+            },
+            methods: {
+                getItems() {
+                    axios.get('/get-items')
+                        .then(response => {
+                            this.items = response.data;
+                            console.log(this.items)
+                        })
+                        .catch(error => {
+                            console.error('Error fetching items:', error);
+                        });
+
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
