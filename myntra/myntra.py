@@ -45,6 +45,8 @@ with open(file_name, "a") as file:
                 fields = [productId, productName, price, rating, ratingCount, searchImage, landingPageUrl]
                 hash[hash_key] = fields 
                 writer.writerow(fields)
+    file.close()
+        
 
 
 
