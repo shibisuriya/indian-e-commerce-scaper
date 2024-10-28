@@ -1,0 +1,9 @@
+version: "3.8"
+
+services:
+  amazon-scraper:
+    build: .  # This tells Docker Compose to build using the Dockerfile in the current directory
+    working_dir: /app
+    volumes:
+      - ./src:/app  # Bind mount the local src folder to /app in the container
+    command: python3 main.py
